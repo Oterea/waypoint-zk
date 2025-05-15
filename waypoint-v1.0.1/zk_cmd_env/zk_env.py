@@ -99,8 +99,8 @@ class ZK_Env(gym.Env):
         if self.goal.is_reach_goal():
             done_info["is_reach_goal"] = True
             self.goal.update_goal()
-            self.step_num = 0
-        #     terminated = True
+            # self.step_num = 0
+            # terminated = True
 
 
         return done_info, terminated, truncated
@@ -192,7 +192,7 @@ class ZK_Env(gym.Env):
         ]
         # print(f"{obs['simulation/dt']}")
         # print(f"{obs['simulation/sim-time-sec']}")
-        observation = self.goal.update(state)
+        observation, self.abs = self.goal.update(state)
         return observation
 
 
@@ -238,30 +238,6 @@ class ZK_Env(gym.Env):
         #     }}
 
 
-        #
-        # action[control_side] = {
-        #     f'{control_side}_0': {
-        #         'mode': 2,
-        #         # 副翼
-        #         "target_altitude_ft": 22965,  # 负数 左下压
-        #         # 方向舵
-        #         "target_velocity": 600,  #
-        #         # 升降舵
-        #         "target_track_deg": 270,  # 负数 上升
-        #
-        #     }}
-        # if self.step_num > 50:
-        #     action[control_side] = {
-        #         f'{control_side}_0': {
-        #             'mode': 2,
-        #             # 副翼
-        #             "target_altitude_ft": 22965,  # 负数 左下压
-        #             # 方向舵
-        #             "target_velocity": 600,  #
-        #             # 升降舵
-        #             "target_track_deg": 270+45,  # 负数 上升
-        #
-        #         }}
 
         action[control_side] = {
             f'{control_side}_0': {
@@ -271,9 +247,10 @@ class ZK_Env(gym.Env):
                 # 方向舵
                 "target_velocity": 600,  #
                 # 升降舵
-                "target_track_deg": 270+self.step_num,  # 负数 上升
+                "target_track_deg": np.degrees(self.abs),  # 负数 上升
 
             }}
+        print(np.degrees(self.abs))
 
         # print(f"ca {ca} -- cr {cr} -- ce {ce} -- ct {ct} ")
         return action

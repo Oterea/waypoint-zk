@@ -18,8 +18,8 @@ class Env_Args:
     blue_com: int = 0
     scenes: int = 3 # 场景三没有地面高山等障碍，防止飞机意外，用于训练
     render: int = 0
-    action_dim: int = 3
-    obs_dim: int = 3
+    action_dim: int = 1
+    obs_dim: int = 5
     control_side: str = 'red'
     excute_path: str = r'/root/nolinux/ZK.x86_64' if sys.platform == "linux" else  rf'{os.environ.get("USERPROFILE")}\Desktop\MM\windows\ZK.exe'
     obs_scale: bool = True
@@ -48,7 +48,7 @@ class Run_Args:
     """if toggled, cuda will be enabled by default"""
     track: bool = False
     """if toggled, this experiment will be tracked with Weights and Biases"""
-    save_freq: int = 2048000
+    save_freq: int = 1024000
     """the frequency of saving checkpoints and """
     wandb_entity: str = "group-waypoint"
     """the entity (team) of wandb's project"""

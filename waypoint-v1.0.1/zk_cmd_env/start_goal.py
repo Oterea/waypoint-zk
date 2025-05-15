@@ -87,7 +87,7 @@ class Goal:
 
         position[2] = (rng.random()*2-1) * 2000 + 7000
 
-        self.position = position
+        self.position = np.array([0,0,7000])
 
     def update(self, state):
 
@@ -140,7 +140,7 @@ class Goal:
         low = np.array([-np.pi, -4000, -1])
         high = np.array([np.pi, 4000, 1])
         obs_scale = 2 * (obs_need_scale - low) / (high - low) - 1
-        return obs_scale
+        return obs_scale, absolute_bearing
 
     def is_reach_goal(self):
         # if self.horizontal_distance - self.goal_reach_threshold <= 0 and abs(self.altitude_err) - self.goal_reach_threshold/2 < 0:

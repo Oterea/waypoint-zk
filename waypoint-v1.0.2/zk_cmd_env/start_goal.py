@@ -60,6 +60,9 @@ class Goal:
 
         self.goal_reach_threshold = 100
 
+        self.horizontal_distance = 0
+        self.horizontal_distance_delta = 0
+
         self.bearing_err = 0
         self.bearing_err_abs_delta = 0
 
@@ -87,7 +90,7 @@ class Goal:
 
         position[2] = (rng.random()*2-1) * 2000 + 7000
 
-        self.position = position
+        self.position = np.array([0,0,7000])
 
     def update(self, state):
 
@@ -96,11 +99,12 @@ class Goal:
         # 与目标位置的坐标偏差 单位米
         displacement = self.position - cur_position
         # 与目标的水平距离
-        self.horizontal_distance = np.linalg.norm(displacement[:2])
 
+        horizontal_distance = np.linalg.norm(displacement[:2])
         # 航向偏差
         bearing = state[11] if state[11] <= np.pi else state[11] - 2 * np.pi
         absolute_bearing = np.arctan2(displacement[1], displacement[0])
+        # print(np.degrees(absolute_bearing))
         bearing_err = ((absolute_bearing - bearing) + np.pi) % (2 * np.pi) - np.pi
         # 高度偏差
         altitude_err = displacement[2]
@@ -112,7 +116,9 @@ class Goal:
         # 姿态角偏差
         roll, pitch = state[9], state[10]
         # -------------------get state-------------------
-
+        pre_horizontal_distance = self.horizontal_distance
+        self.horizontal_distance = horizontal_distance
+        self.horizontal_distance_delta = pre_horizontal_distance - horizontal_distance
 
         pre_bearing_err = self.bearing_err
         self.bearing_err = bearing_err
@@ -135,14 +141,16 @@ class Goal:
         self.roll = roll
         self.pitch = pitch
 
-        obs_need_scale = np.array([self.bearing_err, self.altitude_err, self.mach_err])
+        obs_need_scale = np.array([displacement[0], displacement[1], bearing, roll, pitch])
         # print(obs_need_scale)
-        low = np.array([-np.pi, -4000, -1])
-        high = np.array([np.pi, 4000, 1])
+        low = np.array([-60000, -60000, -np.pi, -np.pi, -np.pi*0.5])
+        high = np.array([60000, 60000, np.pi, np.pi, np.pi*0.5])
         obs_scale = 2 * (obs_need_scale - low) / (high - low) - 1
         return obs_scale
 
     def is_reach_goal(self):
+        # if self.horizontal_distance < 400:
+        #     print(self.horizontal_distance)
         # if self.horizontal_distance - self.goal_reach_threshold <= 0 and abs(self.altitude_err) - self.goal_reach_threshold/2 < 0:
         if self.horizontal_distance - self.goal_reach_threshold <= 0 and abs(self.altitude_err) - self.goal_reach_threshold/2 < 0:
             print(f"horizontal_distance: {self.horizontal_distance}")

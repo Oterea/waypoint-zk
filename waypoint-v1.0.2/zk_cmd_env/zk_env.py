@@ -19,6 +19,7 @@ class ZK_Env(gym.Env):
         self.is_done = False
         self.step_num = 0
         self.reward_info = {}
+        self.max_steps = 600
 
 
     def _set_render_mode(self, render_mode):
@@ -35,7 +36,7 @@ class ZK_Env(gym.Env):
         """
 
         # 使用 Box 定义连续的动作空间
-        self.action_space = gym.spaces.Box(low=-100000, high=100000, shape=(self.args.action_dim,))
+        self.action_space = gym.spaces.Box(low=-1, high=1, shape=(self.args.action_dim,))
 
         self.observation_space = gym.spaces.Box(low=-10, high=10, shape=(self.args.obs_dim,))
 
@@ -87,7 +88,7 @@ class ZK_Env(gym.Env):
 
         truncated, terminated = False, False
 
-        if self.step_num >= 1500:
+        if self.step_num >= self.max_steps:
             done_info["is_max_steps_reach"] = True
             truncated = True
 
@@ -98,9 +99,9 @@ class ZK_Env(gym.Env):
 
         if self.goal.is_reach_goal():
             done_info["is_reach_goal"] = True
-            self.goal.update_goal()
-            self.step_num = 0
-        #     terminated = True
+            # self.goal.update_goal()
+            # self.step_num = 0
+            terminated = True
 
 
         return done_info, terminated, truncated
@@ -124,7 +125,7 @@ class ZK_Env(gym.Env):
 
 
         # step reward
-        total_reward = 0
+        total_reward = - self.step_num / self.max_steps
         # =======================稀疏奖励=======================
         if "is_max_steps_reach" in done_info:
             total_reward += 0
@@ -135,6 +136,8 @@ class ZK_Env(gym.Env):
             total_reward += 100
 
         # ====================== 稠密奖励 ======================
+        horizontal_distance_delta_fn = lambda x : x * 0.05
+
         # 预先定义各个 reward function
         bearing_err_fn = lambda x: np.exp(-1 * abs(x))
         bearing_gain = bearing_err_fn(self.goal.bearing_err)
@@ -151,12 +154,14 @@ class ZK_Env(gym.Env):
         mach_err_fn = lambda x: ((max(-1, x * 10) if x < 0 else np.exp(-10 * x)) * bearing_gain)
 
         reward_items = [
-            ("bearing_err", self.goal.bearing_err, bearing_err_fn),
+
+            ("horizontal_distance_delta", self.goal.horizontal_distance_delta, horizontal_distance_delta_fn),
+            # ("bearing_err", self.goal.bearing_err, bearing_err_fn),
             # ("bearing_err_abs_delta", self.goal.bearing_err_abs_delta, bearing_err_abs_delta_fn),
-            ("altitude_err", self.goal.altitude_err, altitude_err_fn),
+            # ("altitude_err", self.goal.altitude_err, altitude_err_fn),
             ("roll", self.goal.roll, roll_fn),
             ("pitch", self.goal.pitch, pitch_fn),
-            ("mach_err", self.goal.mach_err, mach_err_fn),
+            # ("mach_err", self.goal.mach_err, mach_err_fn),
         ]
 
         for name, value, reward_fn in reward_items:
@@ -199,81 +204,24 @@ class ZK_Env(gym.Env):
     # ============================================================ action related ============================================================
     def compute_action(self, origin_action):
         origin_action = np.array(origin_action, dtype=np.float64)
-
-        # -------------------test--------------------
-        # origin_action[3] = (origin_action[3] + 1) * 0.5
-        #
-        # coef_1, coef_2 = 0.2/2.2, 1.8/2.2
-        #
-        # act_action = coef_1 * (self.pre_origin_action + origin_action) + coef_2 * self.pre_act_action
-        # self.pre_origin_action = origin_action
-        # self.pre_act_action = act_action
-        #
-        # ca = act_action[0]
-        # cr = act_action[1]
-        # ce = act_action[2]
-        # ct = act_action[3]
-
-        # -------------------test--------------------
-
-
-        # ca = origin_action[0]
-        # cr = origin_action[1]
-        # ce = origin_action[2]
-        # ct = (origin_action[3] + 1) * 0.5
+        heading = origin_action[0] * 180
 
         control_side = self.args.control_side
         action = dict()
-        # action[control_side] = {
-        #     f'{control_side}_0': {
-        #         'mode': 0,
-        #         # 副翼
-        #         "fcs/aileron-cmd-norm": ca, # 负数 左下压
-        #         # 方向舵
-        #         "fcs/rudder-cmd-norm": cr, #
-        #         # 升降舵
-        #         "fcs/elevator-cmd-norm": ce, # 负数 上升
-        #         # 油门
-        #         "fcs/throttle-cmd-norm": ct,
-        #     }}
 
-
-        #
-        # action[control_side] = {
-        #     f'{control_side}_0': {
-        #         'mode': 2,
-        #         # 副翼
-        #         "target_altitude_ft": 22965,  # 负数 左下压
-        #         # 方向舵
-        #         "target_velocity": 600,  #
-        #         # 升降舵
-        #         "target_track_deg": 270,  # 负数 上升
-        #
-        #     }}
-        # if self.step_num > 50:
-        #     action[control_side] = {
-        #         f'{control_side}_0': {
-        #             'mode': 2,
-        #             # 副翼
-        #             "target_altitude_ft": 22965,  # 负数 左下压
-        #             # 方向舵
-        #             "target_velocity": 600,  #
-        #             # 升降舵
-        #             "target_track_deg": 270+45,  # 负数 上升
-        #
-        #         }}
-
+        x = 3.28084
         action[control_side] = {
             f'{control_side}_0': {
                 'mode': 2,
-                # 副翼
-                "target_altitude_ft": 22965,  # 负数 左下压
-                # 方向舵
-                "target_velocity": 600,  #
-                # 升降舵
-                "target_track_deg": 270+self.step_num,  # 负数 上升
+                # 目标高度
+                "target_altitude_ft": self.goal.position[2] * x,  # 负数 左下压
+                # 目标速度ft
+                "target_velocity": 900,  #
+                # 目标航向 -180 180
+                "target_track_deg": heading,  # 负数 上升
 
             }}
+
 
         # print(f"ca {ca} -- cr {cr} -- ce {ce} -- ct {ct} ")
         return action
