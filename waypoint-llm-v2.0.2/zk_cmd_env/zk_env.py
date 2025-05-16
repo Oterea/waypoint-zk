@@ -42,7 +42,9 @@ class ZK_Env:
         return obs, {}
 
     def step(self, action_array):
+
         action_dict = self.compute_action(action_array)
+
         self.connection.send_condition(action_dict)
         next_obs = self.compute_observation(self.connection.accept_from_socket())
         done_info = self._is_done()
