@@ -110,9 +110,7 @@ class Goal:
         altitude_err = displacement[2]
         # 速度偏差
         mach_err = 1 - state[3]
-        # alpha_beta = state[4:6]
-        # angular_rates = state[6:9]
-        # print(angular_rates[0])
+
         # 姿态角偏差
         roll, pitch = state[9], state[10]
         # -------------------get state-------------------
@@ -141,12 +139,9 @@ class Goal:
         self.roll = roll
         self.pitch = pitch
 
-        obs_need_scale = np.array([displacement[0], displacement[1], bearing, roll, pitch])
-        # print(obs_need_scale)
-        low = np.array([-60000, -60000, -np.pi, -np.pi, -np.pi*0.5])
-        high = np.array([60000, 60000, np.pi, np.pi, np.pi*0.5])
-        obs_scale = 2 * (obs_need_scale - low) / (high - low) - 1
-        return obs_scale
+        obs = np.array([self.position[2], 300, np.degrees(absolute_bearing)])
+
+        return obs
 
     def is_reach_goal(self):
         # if self.horizontal_distance < 400:
